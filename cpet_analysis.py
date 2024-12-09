@@ -28,9 +28,9 @@ from utils import nondimensionalize, flattening_fraction, o2p_response_ratio, o2
 from utils import save_spreadsheet
 
 # FIXME: Provide the paths on your computer. You can generate pseudo data first.
-META_DATA_PATH: str = ...
-MERGED_DATA_PATH: str = ...
-OUTPUT_DIR: str = ...
+META_DATA_PATH: str = "pseudo_data/meta_data.csv"
+MERGED_DATA_PATH: str = "pseudo_data/merged_data.xlsx"
+OUTPUT_DIR: str = "pseudo_data/"
 
 
 def main():

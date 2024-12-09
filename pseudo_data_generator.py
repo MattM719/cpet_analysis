@@ -29,7 +29,8 @@ from matplotlib.axes import Axes
 
 # set the number of synthetic data files you would like to generate
 N_FILES: int = 3
-OUTPUT_DIR: str = ...  #FIXME supply a directory or use: os.path.dirname(__file__)
+OUTPUT_DIR: str = "pseudo_data/"  #FIXME supply a directory or use: os.path.dirname(__file__)
+os.mkdir(OUTPUT_DIR)
 PLOT: bool = False
 
 
