@@ -1,6 +1,6 @@
-matplotlib==3.9.1
-numpy==2.0.1
+matplotlib==3.10.0
+numpy==2.2.0
 openpyxl==3.1.5
-pandas==2.2.2
-scipy==1.14.0
+pandas==2.2.3
+scipy==1.14.1
 XlsxWriter==3.2.0
