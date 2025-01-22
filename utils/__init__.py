@@ -13,7 +13,6 @@ __credits__ = [
     "Patrick M Boyle",
     "Jonathan Buber",
 ]
-__version__ = "1.1.0"
 
 try:
     import matplotlib
@@ -25,6 +24,7 @@ except Exception as exc:
         "Please install the required packages in requirements.txt"
     ) from exc
 
-from .data_reader import *
-from .calculations import *
-from .output import *
+from . import data_reader
+from . import calculations
+from . import output
+from .utils import META_TYPE, RESULTS_TYPE, DATA_TYPE, RESULTS_INFO_TYPE, time_to_index

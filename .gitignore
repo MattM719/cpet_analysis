@@ -1,2 +1,5 @@
 .venv
+.DS_Store
+__pycache__
 utils/__pycache__
+pseudo_data

@@ -4,10 +4,14 @@
 """Performs the actual calculations
 """
 
-from typing import Literal
+from typing import Any, Dict, Literal, Mapping, Optional, Tuple
 
 import numpy as np
+import pandas as pd
 from scipy.stats import linregress
+from scipy.integrate import trapezoid
+
+from .utils import META_TYPE, RESULTS_TYPE, RESULTS_INFO_TYPE, time_to_index
 
 
 # ======================================================================== #
@@ -17,16 +21,16 @@ from scipy.stats import linregress
 
 
 def optimize_plateau(
-    x_values: np.ndarray,
-    y_values: np.ndarray,
-    start_idx: int,
-    stop_idx: int,
-    plat_method: Literal["cos", "invslope", "none"] = "invslope",
-    buffer: float = 0.1,
-    tolerance: float = 0.8,
-    idnum: str = "-1",
-    instance: str = "-1",
-) -> tuple[int, np.ndarray, np.ndarray, np.ndarray]:
+        x_values: np.ndarray,
+        y_values: np.ndarray,
+        start_idx: int,
+        stop_idx: int,
+        plat_method: Literal["cos", "invslope", "none"] = "invslope",
+        buffer: float = 0.1,
+        tolerance: float = 0.8,
+        idnum: str = "-1",
+        instance: str = "-1",
+) -> Tuple[int, np.ndarray, np.ndarray, np.ndarray]:
     """Fits a bilinear regression curve to the data.
 
     This is the main method. A penalty can be applied to try to select a curve with a positive
@@ -74,8 +78,8 @@ def optimize_plateau(
             x_values = np.interp(x_values_len, x_values_len[mask], x_values[mask])
         except:
             print(
-                "\n*******************************************\n"
-                + f"No x values for {idnum}_{instance}"
+                "\n*******************************************\n" \
+                + f"No x values for {idnum}_{instance}" \
                 + "\n*******************************************\n"
             )
             raise
@@ -287,39 +291,42 @@ def nondimensionalize(
     return time
 
 
-def flattening_fraction(
-    study: dict, time: np.ndarray, transition_index: int, nondimensional: bool
-) -> dict:
+def add_flattening_fraction(
+        study: dict, time: np.ndarray, transition_index: int, nondimensional: bool
+) -> None:
     """Adds flattening fraction to the dict ('study')
 
-    Args:
-        study: dict generated from reading meta data
-        time: time array
-        transition_index: transition index
-        nondimensional: true if time was nondimensionalized
+    Parameters:
+    ----------
+    study: dict generated from reading meta data  
 
-    Returns:
-        updated 'study' dict
+    time: time array  
+
+    transition_index: transition index  
+
+    nondimensional: true if time was nondimensionalized  
     """
     # transition time and flattening fraction
     if nondimensional:
-        study["Flattening Fraction"] = time[transition_index]
+        study["Flattening Fraction"] = float(time[transition_index])
     else:
-        study["Transition Time (min)"] = time[transition_index]
+        study["Transition Time (min)"] = float(time[transition_index])
 
-    return study
+    return None
 
 
-def o2p_response_ratio(study: dict, slopes: np.ndarray, nondimensional: bool) -> dict:
+def add_o2p_response_ratio(
+        study: dict, slopes: np.ndarray, nondimensional: bool
+) -> None:
     """Adds O2-Pulse Response Ratio to the dict ('study')
 
-    Args:
-        study: dict generated from reading meta data
-        slopes: [slope1, slope2]
-        nondimensional: true if time was nondimensionalized
+    Parameters:
+    ----------
+    study: dict generated from reading meta data  
 
-    Returns:
-        updated 'study' dict
+    slopes: [slope1, slope2]  
+
+    nondimensional: true if time was nondimensionalized
     """
     # transition time and flattening fraction
     if nondimensional:
@@ -329,29 +336,32 @@ def o2p_response_ratio(study: dict, slopes: np.ndarray, nondimensional: bool) ->
 
     study[key] = float(slopes[0] / slopes[1]) if slopes[0] != 0 else float("nan")
 
-    return study
+    return None
 
 
-def o2p_auc(
+def add_o2p_auc(
     study: dict,
     time: np.ndarray,
     o2p: np.ndarray,
     start_idx: int,
     end_idx: int,
     nondimensional: bool,
-) -> dict:
+) -> None:
     """Adds flattening fraction to the dict ('study')
 
-    Args:
-        study: dict generated from reading meta data
-        time: time array
-        o2p: O2-Pulse
-        start_idx: index of beginning of exercise
-        end_idx: index of end of exercise
-        nondimensional: true if time was nondimensionalized
+    Parameters:
+    ----------
+    study: dict generated from reading meta data  
 
-    Returns:
-        updated 'study' dict
+    time: time array  
+
+    o2p: O2-Pulse  
+
+    start_idx: index of beginning of exercise  
+
+    end_idx: index of end of exercise  
+
+    nondimensional: true if time was nondimensionalized
     """
     start_idx = int(start_idx)
     end_idx = int(end_idx)
@@ -363,6 +373,67 @@ def o2p_auc(
 
     # address any non-finite values here, if needed
 
-    study[key] = np.trapz(o2p[start_idx : end_idx + 1], time[start_idx : end_idx + 1])
+    study[key] = float(
+        trapezoid(o2p[start_idx : end_idx + 1], time[start_idx : end_idx + 1])
+    )
 
-    return study
+    return None
+
+
+def _get_start_end_indices(meta: META_TYPE, time: np.ndarray) -> tuple[int,int]:
+    """Get the start and end indices, either supplied from meta or using the start/end times"""
+    start_index = meta.get("Start Index", None)
+    end_index = meta.get("End Index", None)
+
+    if start_index is None:
+        start_index = time_to_index(meta["Start Time"], time)
+    if end_index is None:
+        end_index = time_to_index(meta["End Time"], time)
+    
+    return (int(start_index), int(end_index))
+
+
+def run_analysis(
+        meta: META_TYPE, data: pd.DataFrame
+) -> Tuple[RESULTS_TYPE, RESULTS_INFO_TYPE]:
+    """ Runs the actual analysis once meta and data are provided """
+    time = data["Time"].to_numpy(dtype=np.float64)
+
+    start_index, end_index = _get_start_end_indices(meta, time)
+    nd_time = nondimensionalize(
+        time, start_idx=start_index, end_idx=end_index,
+    )
+    o2_pulse = data["O2-Pulse"].to_numpy(dtype=np.float64)
+
+    # find optimized plateau - this is the key method described in the paper.
+    # can use minutes or dimensional time
+    study: RESULTS_TYPE = {**meta}
+    study["Start Index"] = start_index
+    study["End Index"] = end_index
+    info: Dict[str, Any] = {"time_min": time, "time_nd": nd_time}
+
+    for t, label in zip([time, nd_time], ["min", "nd"]):
+        idx_transition, slopes, intercepts, r_values = optimize_plateau(
+            t,
+            o2_pulse,
+            start_idx=int(study["Start Index"]),
+            stop_idx=int(study["End Index"]),
+            plat_method="invslope",
+        )  # r_values are correlation coeffs (r), not coeffs of determination (R^2)
+        info[f'slopes_{label}'] = slopes
+        info[f'intercepts_{label}'] = intercepts
+        info[f'r_values_{label}'] = r_values
+
+        add_flattening_fraction(study, t, idx_transition, (label == "nd"))
+        add_o2p_response_ratio(study, slopes, (label == "nd"))
+        add_o2p_auc(
+            study,
+            t,
+            o2_pulse,
+            study["Start Index"],
+            study["End Index"],
+            (label == "nd"),
+        )
+
+
+    return (study, info)
