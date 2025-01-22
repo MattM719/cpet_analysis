@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""Simple code to generate pseudo-data. 
+"""Simple code to generate pseudo-data.
 
-This is intended to support the minimum working example. Synthetic data are generated with noise 
-and other perturbations and help users get the code working. This synthetic data also demonstrates 
-proper data formatting to be interpretted by the MWE, cpet_analysis.py.
+This is intended to support the minimum working example. Synthetic data are generated
+with noise and other perturbations and help users get the code working. This synthetic
+data also demonstrates proper data formatting to be interpretted by cpet_analysis.py.
 """
 
 __author__ = "Matthew J Magoon"
@@ -57,13 +57,15 @@ def create_pseudo_data(n: int, duration: float) -> dict:
     transition_idx = time_to_index(0.4 * duration, time)
     stop_exercise_idx = time_to_index(0.8 * duration, time)
 
-    start_exercise_time = time[start_exercise_idx]  
+    start_exercise_time = time[start_exercise_idx]
     transition_time = time[transition_idx]
     stop_exercise_time = time[stop_exercise_idx]
 
     work = np.zeros_like(time)
     exercising = (time >= start_exercise_time) * (time <= stop_exercise_time)
-    ramp = np.linspace(0, 20 * (stop_exercise_time-start_exercise_time), np.sum(exercising))
+    ramp = np.linspace(
+        0, 20 * (stop_exercise_time - start_exercise_time), np.sum(exercising)
+    )
     ramp += float(ramp[1])
     work[exercising] = ramp[:]
 
@@ -126,26 +128,26 @@ def create_pseudo_data(n: int, duration: float) -> dict:
     return pseudo_data
 
 
-def save_cincinnati_csv(path: Path, data: dict[Literal["Time", "Work", "HR", "VO2", "O2-Pulse"],np.ndarray]) -> None:
-    """ Saves pseudo data to a CSV with the Cincinnati layout """
-    headers = ['Time_sec', 'Work_Watts', 'HR', 'VO2_mLmin', 'VO2HR']
-    units = ['sec', 'Watts', 'BPM', 'mL/min', 'mL/beat']
+def save_cincinnati_csv(
+    path: Path, data: dict[Literal["Time", "Work", "HR", "VO2", "O2-Pulse"], np.ndarray]
+) -> None:
+    """Saves pseudo data to a CSV with the Cincinnati layout"""
+    headers = ["Time_sec", "Work_Watts", "HR", "VO2_mLmin", "VO2HR"]
+    units = ["sec", "Watts", "BPM", "mL/min", "mL/beat"]
     data_keys = ["Time", "Work", "HR", "VO2", "O2-Pulse"]
 
     arr = np.vstack(
-        tuple(
-            [data[k].flatten() for k in data_keys]
-        ),
+        tuple([data[k].flatten() for k in data_keys]),
         dtype=np.float64,
     ).T
-    arr[:,0] *= 60 # convert from minutes to seconds
+    arr[:, 0] *= 60  # convert from minutes to seconds
 
     with open(path, mode="w", encoding="utf-8") as file:
         writer = csv.writer(file, dialect="excel", lineterminator="\n")
         writer.writerow(headers)
         writer.writerow(units)
         writer.writerows(arr.tolist())
-    
+
     path.chmod(0o660)
 
     return None
@@ -199,7 +201,14 @@ def main():
         synthetic_data.append(data)
 
         if PLOT:
-            plot_data_time(data, extra_info=None, output_dir=Path(OUTPUT_DIR), is_synthetic=True, no_lines=True, no_auc=True)
+            plot_data_time(
+                data,
+                extra_info=None,
+                output_dir=Path(OUTPUT_DIR),
+                is_synthetic=True,
+                no_lines=True,
+                no_auc=True,
+            )
 
     # create an excel file that merges data form every participant
     column_names = ["Time", "Work", "HR", "VO2", "O2-Pulse"]
@@ -222,7 +231,7 @@ def main():
             data=data,
         )
 
-    empty_results = OUTPUT_DIR / 'results'
+    empty_results = OUTPUT_DIR / "results"
     empty_results.mkdir(0o751)
 
 
