@@ -4,6 +4,7 @@
 """Performs the actual calculations
 """
 
+import warnings
 from typing import Any, Dict, Literal, Tuple
 
 import numpy as np
@@ -182,16 +183,21 @@ def optimize_plateau(
         tss1 = np.sum(np.square(y_values[start_idx:x_t_idx + 1] - y_mean1))
         tss2 = np.sum(np.square(y_values[x_t_idx + 1:stop_idx + 1] - y_mean2))
 
-        r_squares = (
-            1.0
-            - np.array(
-                [
-                    rss1 / tss1,
-                    rss2 / tss2,
-                ],
-                dtype=np.float64,
-            ).flatten()
-        )
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                action='ignore',
+                category=RuntimeWarning, # filter zero division warnings
+            )
+            r_squares = (
+                1.0
+                - np.array(
+                    [
+                        rss1 / tss1,
+                        rss2 / tss2,
+                    ],
+                    dtype=np.float64,
+                ).flatten()
+            )
 
         # store results
         slopes[j, :] = params[:2]  # m1, m2
@@ -306,7 +312,7 @@ def nondimensionalize(
 
 
 def add_flattening_fraction(
-    study: dict, time: np.ndarray, transition_index: int, nondimensional: bool
+    study: RESULTS_TYPE, time: np.ndarray, transition_index: int, nondimensional: bool
 ) -> None:
     """Adds flattening fraction to the dict ('study')
 
@@ -330,7 +336,7 @@ def add_flattening_fraction(
 
 
 def add_o2p_response_ratio(
-    study: dict, slopes: np.ndarray, nondimensional: bool
+    study: RESULTS_TYPE, slopes: np.ndarray, nondimensional: bool
 ) -> None:
     """Adds O2-Pulse Response Ratio to the dict ('study')
 
@@ -353,15 +359,15 @@ def add_o2p_response_ratio(
     return None
 
 
-def add_o2p_auc(
-    study: dict,
+def __add_o2p_auc_DEPRECATED(
+    study: RESULTS_TYPE,
     time: np.ndarray,
     o2p: np.ndarray,
     start_idx: int,
     end_idx: int,
     nondimensional: bool,
 ) -> None:
-    """Adds flattening fraction to the dict ('study')
+    """Adds O2-Pulse AUC to the dict ('study')
 
     Parameters:
     ----------
@@ -390,6 +396,74 @@ def add_o2p_auc(
     study[key] = float(
         trapezoid(o2p[start_idx:end_idx + 1], time[start_idx:end_idx + 1])
     )
+
+    return None
+
+
+def add_o2p_auc(
+    study: RESULTS_TYPE,
+    time: np.ndarray,
+    slopes: np.ndarray,
+    intercepts: np.ndarray,
+    start_idx: int,
+    transition_idx: int,
+    end_idx: int,
+    nondimensional: bool,
+) -> None:
+    """Adds O2-Pulse AUC to the dict ('study')
+
+    Parameters:
+    ----------
+    study: dict generated from reading meta data
+
+    time: time array
+
+    slopes: O2-Pulse slopes [slope1, slope2]
+
+    intercepts: O2-Pulse intercepts [intercept1, intercept2]
+
+    start_idx: index of beginning of exercise
+
+    transition_idx: index of transition point
+
+    end_idx: index of end of exercise
+
+    nondimensional: true if time was nondimensionalized
+    """
+    start_idx = int(start_idx)
+    transition_idx = int(transition_idx)
+    end_idx = int(end_idx)
+
+    if nondimensional:
+        key = "O2-Pulse AUC, nondimensional time (mL/beat)"
+    else:
+        key = "O2-Pulse AUC (mL*min/beat)"
+
+    assert len(slopes) == 2
+    assert len(intercepts) == 2
+
+    # no slopes, intercepts
+    if not np.any(np.isfinite(slopes)) or not np.any(np.isfinite(intercepts)):
+        study[key] = float('nan')
+        return None
+
+    # missing first intercept
+    if not np.isfinite(intercepts)[0]:
+        raise NotImplementedError(f"Calculate first intercept from second")
+
+    # missing a slope
+    if not np.all(np.isfinite(slopes)):
+        tmp = float(slopes[np.isfinite(slopes)][0])
+        slopes = np.array([tmp, tmp])
+    
+    dt1 = time[transition_idx] - time[start_idx]
+    dt2 = time[end_idx] - time[transition_idx]
+
+    pt0 = slopes[0] * time[start_idx] + intercepts[0]
+    pt1 = slopes[0] * dt1 + pt0
+    pt2 = slopes[1] * dt2 + pt1
+
+    study[key] = (0.5 * (pt0 + pt1) * dt1) + (0.5 * (pt1 + pt2) * dt2)
 
     return None
 
@@ -447,8 +521,10 @@ def run_analysis(
         add_o2p_auc(
             study,
             t,
-            o2_pulse,
+            slopes,
+            intercepts,
             study["Start Index"],
+            idx_transition,
             study["End Index"],
             (label == "nd"),
         )

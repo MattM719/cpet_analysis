@@ -189,14 +189,35 @@ def plot_data_time(
         )
         line_handles = [l0, l1]
 
-    # add AUC
-    if not no_auc:
+        # add AUC
+        if not no_auc:
+            time = np.array(data["Time"], dtype=np.float64)
+            o2p = np.array(data["O2-Pulse"], dtype=np.float64)
+            during = (time >= data["Start Time"]) * (time <= data["End Time"])
+            auc = data["O2-Pulse AUC (mL*min/beat)"]
+            units_text = r"mL $\bullet$ min / beat"
+            auc_tmp = round(auc) if auc == auc else "NaN"
+            auc_label = f"Exercise AUC = {auc_tmp} {units_text}"
+            auc_handle = ax[2].fill_between(
+                [start_time, trans_time, end_time],
+                [0,0,0],
+                [ac[0], b, ac[1]],
+                interpolate=True,
+                facecolor="k",
+                edgecolor="none",
+                alpha=0.4,
+                label=auc_label,
+            )
+
+
+    if False and not no_auc:
         time = np.array(data["Time"], dtype=np.float64)
         o2p = np.array(data["O2-Pulse"], dtype=np.float64)
         during = (time >= data["Start Time"]) * (time <= data["End Time"])
         auc = data["O2-Pulse AUC (mL*min/beat)"]
         units_text = r"mL $\bullet$ min / beat"
-        auc_label = f"Exercise AUC = {round(auc)} {units_text}"
+        auc_tmp = round(auc) if auc == auc else "NaN"
+        auc_label = f"Exercise AUC = {auc_tmp} {units_text}"
         auc_handle = ax[2].fill_between(
             x=time[during],
             y1=np.zeros_like(time[during]),
@@ -402,14 +423,35 @@ def plot_data_nondimensional(
         )
         line_handles = [l0, l1]
 
+        # add AUC
+        if not no_auc:
+            time = extra_info["time_nd"]
+            o2p = np.array(data["O2-Pulse"], dtype=np.float64)
+            during = (time >= start_time) * (time <= end_time)
+            auc = data["O2-Pulse AUC, nondimensional time (mL/beat)"]
+            units_text = "mL / beat"
+            auc_tmp = round(auc) if auc == auc else "NaN"
+            auc_label = f"Exercise AUC = {auc_tmp} {units_text}"
+            auc_handle = ax[2].fill_between(
+                [start_time, trans_time, end_time],
+                [0,0,0],
+                [ac[0], b, ac[1]],
+                interpolate=True,
+                facecolor="k",
+                edgecolor="none",
+                alpha=0.4,
+                label=auc_label,
+            )
+
     # add AUC
-    if not no_auc:
+    if False and not no_auc:
         time = extra_info["time_nd"]
         o2p = np.array(data["O2-Pulse"], dtype=np.float64)
         during = (time >= start_time) * (time <= end_time)
         auc = data["O2-Pulse AUC, nondimensional time (mL/beat)"]
         units_text = "mL / beat"
-        auc_label = f"Exercise AUC = {round(auc)} {units_text}"
+        auc_tmp = round(auc) if auc == auc else "NaN"
+        auc_label = f"Exercise AUC = {auc_tmp} {units_text}"
         auc_handle = ax[2].fill_between(
             x=time[during],
             y1=np.zeros_like(time[during]),
