@@ -255,9 +255,8 @@ def read_study_data(
         if isinstance(units, dict):
             time_units = str(units["Time"]).strip().lower()
             if time_units == "sec":
-                df["Time"] = (
-                    df["Time"].to_numpy(dtype=np.float64) / 60
-                )  # convert seconds to minutes
+                # convert seconds to minutes
+                df["Time"] = (df["Time"].to_numpy(dtype=np.float64) / 60)  
                 units["Time"] = "min"
             elif time_units == "min":
                 pass
@@ -269,10 +268,18 @@ def read_study_data(
                 "cincinnati layout",
                 category=UserWarning,
             )
-            df["Time"] = (
-                df["Time"].to_numpy(dtype=np.float64) / 60
-            )  # convert seconds to minutes
+            # convert seconds to minutes
+            df["Time"] = (df["Time"].to_numpy(dtype=np.float64) / 60)
 
+    # ensure valid values
+    vo2 = df["VO2"].to_numpy(dtype=np.float64).flatten()
+    hr = df["HR"].to_numpy(dtype=np.float64).flatten()
+    vo2[(vo2 < 0.5) + (vo2 > 10000)] = np.nan
+    hr[(hr < 40) + (hr > 250)] = np.nan
+    df["VO2"] = vo2
+    df["HR"] = hr
+
+    # recalculate O2-Pulse, if needed
     if recalculate_o2_pulse:
         vo2 = df["VO2"].to_numpy(dtype=np.float64).flatten()
         hr = df["HR"].to_numpy(dtype=np.float64).flatten()
@@ -324,7 +331,6 @@ def infer_meta(path: str | Path, df: pd.DataFrame, is_sheet: bool) -> META_TYPE:
     # constrain df to exercising period (where work > 0)
     df = df.reset_index(inplace=False, drop=True)
     exercise_df = df[df["Work"] > 0]
-    rest_df = df[df["Work"] == 0]
 
     # update meta with exercise start/end data
     exercise_indices = np.array(exercise_df.index.to_list(), dtype=np.int64)
@@ -333,11 +339,11 @@ def infer_meta(path: str | Path, df: pd.DataFrame, is_sheet: bool) -> META_TYPE:
     meta["Start Index"] = start_index
     meta["Start Time"] = float(exercise_times[0])
 
-    rest_indices = np.array(rest_df.index.to_list(), dtype=np.int64)
-    recover_indices = rest_indices[rest_indices > start_index]
-    if len(recover_indices) > 0:
-        recover_index = int(np.min(recover_indices))
-        end_index = int(np.max(exercise_indices[exercise_indices < recover_index]))
+    # end time/index
+    d_work = np.diff(df["Work"].to_numpy(dtype=np.float64).flatten(), n=1)[start_index:]
+    work_indices = np.arange(len(d_work), dtype=np.int64) + start_index
+    if np.any(d_work < 0):
+        end_index = int(np.min(work_indices[d_work < 0])) 
     else:
         end_index = int(exercise_indices[-1])
 

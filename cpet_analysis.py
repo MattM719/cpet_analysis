@@ -12,16 +12,16 @@ DOI: 10.1016/j.ijcchd.2024.100539
 Usage examples:
 --------------
 # UW formatted data in a merged excel file, supply meta data
-python cpet_analysis.py  pseudo_data/merged_data.xlsx  pseudo_data/results  -m pseudo_data/meta_data.csv  -l uw  -p
+python cpet_analysis.py -pr -l uw -m pseudo_data/meta_data.csv pseudo_data/merged_data.xlsx  pseudo_data/results
 
 # UW formatted data in a merged excel file, do not provide meta data
-python cpet_analysis.py  pseudo_data/merged_data.xlsx  pseudo_data/results  -l uw  -p
+python cpet_analysis.py -pr -l uw pseudo_data/merged_data.xlsx  pseudo_data/results
 
 # Cincinnati formatted CSV files, supply meta data
-python cpet_analysis.py  pseudo_data/cincinnati  pseudo_data/results  -m pseudo_data/meta_data.csv  -l cincinnati  -p
+python cpet_analysis.py -pr -l cincinnati -m pseudo_data/meta_data.csv pseudo_data/cincinnati  pseudo_data/results
 
 # Cincinnati formatted CSV files, do not provide meta data
-python cpet_analysis.py  pseudo_data/cincinnati  pseudo_data/results  -l cincinnati  -p
+python cpet_analysis.py -pr -l cincinnati pseudo_data/cincinnati  pseudo_data/results
 """
 
 __author__ = "Matthew J Magoon"
