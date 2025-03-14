@@ -34,9 +34,10 @@ __credits__ = [
     "Patrick M Boyle",
     "Jonathan Buber",
 ]
-__version__ = "1.2.1"
+__version__ = "1.2.2"
 
 import argparse
+import warnings
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Literal, Mapping, Optional
@@ -296,7 +297,8 @@ def use_supplied_meta(
             recalculate_o2_pulse=recalculate_o2_pulse,
         )
         meta, data, units = fix_time(meta, data, units)
-        # FIXME: verify units are correct
+
+        # TODO: verify units are correct
 
         study, extra_info = run_analysis(meta=meta, data=data)
 
@@ -352,14 +354,26 @@ def use_inferred_meta(
             path, sheet_name = input_path, name
         else:
             path, sheet_name = name, None
-        meta, data, units = read_without_meta(
-            path,
-            sheet_name=sheet_name,
-            layout=layout,
-            recalculate_o2_pulse=recalculate_o2_pulse,
-            plot=plot,
-        )
-        # FIXME: verify units are correct
+        
+        try:
+            meta, data, units = read_without_meta(
+                path,
+                sheet_name=sheet_name,
+                layout=layout,
+                recalculate_o2_pulse=recalculate_o2_pulse,
+                plot=plot,
+            )
+        except IndexError as e:
+            if str(e) != "Cannot infer meta without nonzero work":
+                raise
+            n = path.name if sheet_name is None else sheet_name
+            warnings.warn(
+                f"Cannot infer meta without nonzero work, skipping '{n}'",
+                category=UserWarning,
+            )
+            continue
+        
+        #TODO: verify units are correct
 
         study, extra_info = run_analysis(meta=meta, data=data)
 
