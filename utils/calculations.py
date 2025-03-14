@@ -447,15 +447,15 @@ def add_o2p_auc(
         study[key] = float('nan')
         return None
 
-    # missing first intercept
-    if not np.isfinite(intercepts)[0]:
-        raise NotImplementedError(f"Calculate first intercept from second")
-
     # missing a slope
     if not np.all(np.isfinite(slopes)):
         tmp = float(slopes[np.isfinite(slopes)][0])
-        slopes = np.array([tmp, tmp])
-    
+        slopes = np.array([tmp, tmp], dtype=np.float64)
+
+    # missing first intercept
+    if not np.isfinite(intercepts)[0]:
+        intercepts[0] = (slopes[1] - slopes[0]) * time[transition_idx] + intercepts[1]
+
     dt1 = time[transition_idx] - time[start_idx]
     dt2 = time[end_idx] - time[transition_idx]
 
