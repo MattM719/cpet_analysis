@@ -34,7 +34,7 @@ __credits__ = [
     "Patrick M Boyle",
     "Jonathan Buber",
 ]
-__version__ = "1.2.0"
+__version__ = "1.2.1"
 
 import argparse
 from datetime import datetime

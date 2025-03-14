@@ -335,17 +335,25 @@ def infer_meta(path: str | Path, df: pd.DataFrame, is_sheet: bool) -> META_TYPE:
     # update meta with exercise start/end data
     exercise_indices = np.array(exercise_df.index.to_list(), dtype=np.int64)
     exercise_times = exercise_df["Time"].to_numpy(dtype=np.float64).flatten()
+    print(path)
     start_index = int(exercise_indices[0])
     meta["Start Index"] = start_index
     meta["Start Time"] = float(exercise_times[0])
 
     # end time/index
+    work_reversed = df['Work'].to_numpy(dtype=np.float64).flatten()[::-1]
+    end_index_reversed = int(np.argmax(work_reversed))
+    end_index = work_reversed.shape[0] - 1 - end_index_reversed
+
+    # DEPRECATED end time/index
+    """
     d_work = np.diff(df["Work"].to_numpy(dtype=np.float64).flatten(), n=1)[start_index:]
     work_indices = np.arange(len(d_work), dtype=np.int64) + start_index
     if np.any(d_work < 0):
         end_index = int(np.min(work_indices[d_work < 0])) 
     else:
         end_index = int(exercise_indices[-1])
+    """
 
     meta["End Index"] = end_index
     meta["End Time"] = float(exercise_df.loc[end_index, ["Time"]].iloc[0])
