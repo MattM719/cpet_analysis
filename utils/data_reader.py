@@ -331,11 +331,12 @@ def infer_meta(path: str | Path, df: pd.DataFrame, is_sheet: bool) -> META_TYPE:
     # constrain df to exercising period (where work > 0)
     df = df.reset_index(inplace=False, drop=True)
     exercise_df = df[df["Work"] > 0]
+    if exercise_df.shape[0] == 0:
+        raise IndexError("Cannot infer meta without nonzero work")
 
     # update meta with exercise start/end data
     exercise_indices = np.array(exercise_df.index.to_list(), dtype=np.int64)
     exercise_times = exercise_df["Time"].to_numpy(dtype=np.float64).flatten()
-    print(path)
     start_index = int(exercise_indices[0])
     meta["Start Index"] = start_index
     meta["Start Time"] = float(exercise_times[0])
