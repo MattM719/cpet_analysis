@@ -461,7 +461,6 @@ def main(
 if __name__ == "__main__":
     if USE_COMMAND_LINE_INTERFACE:
         configs = process_args()
-        print(configs)
     else:
         artificial = [
             str(INPUT_PATH),
