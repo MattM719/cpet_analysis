@@ -34,13 +34,13 @@ __credits__ = [
     "Patrick M Boyle",
     "Jonathan Buber",
 ]
-__version__ = "1.2.2"
+__version__ = "1.2.3"
 
 import argparse
 import warnings
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Literal, Mapping, Optional
+from typing import Any, Dict, List, Literal, Mapping, Optional
 
 import pandas as pd
 from tqdm import tqdm
@@ -176,6 +176,15 @@ def process_args(*args) -> dict[str, Any]:
         action="store_true",
         help="Remove AUC shading from the plot.",
     )
+    optional.add_argument(
+        "-f",
+        "--image-format",
+        type=str,
+        # choices=["uw", "cincinnati"],
+        default="png",
+        help="Image format (i.e., 'png' or 'svg') or a comma-separated list of formats " \
+        "(i.e., 'png,pdf') for generated plots.",
+    )
 
     # parse arguments
     def drop_empty(x: Any) -> bool:
@@ -200,13 +209,15 @@ def _update_plot_settings(**updates: Mapping[str, Any]) -> Dict[str, Any]:
         "no_transition_annotations": False,  # bool
         "no_auc": False,  # bool
         "dpi": 600,  # int
-        "image_format": "png",  # Literal['png','svg','pdf']
+        "image_format": "png",  # Literal['png','svg','pdf'] | List
     }
-    for kw in updates:
+    for kw, val in updates.items():
         if kw not in plotting_params:
             raise NotImplementedError(
-                f"Unable to process '{kw}': '{plotting_params[kw]}'"
+                f"Unable to process '{kw}'"
             )
+        if kw == 'image_format' and ',' in val:
+            updates[kw] = str(val).split(',')
     plotting_params.update(updates)
     return plotting_params
 
@@ -216,7 +227,7 @@ def plot_study(
     study: RESULTS_TYPE,
     extra_info: RESULTS_INFO_TYPE,
     output_dir: Path,
-    image_format: Literal["png", "svg", "pdf"] = "png",
+    image_format: Literal["png", "svg", "pdf"] | List[Literal["png", "svg", "pdf"]] = "png",
     dpi: int = 600,
     no_lines: bool = False,
     no_transition_annotations: bool = False,
@@ -232,28 +243,34 @@ def plot_study(
 
     merged = data | study
 
-    plot_data_time(
-        data=merged,
-        extra_info=extra_info,
-        output_dir=plot_dir,
-        is_synthetic=False,
-        no_lines=no_lines,
-        no_transition_annotations=no_transition_annotations,
-        no_auc=no_auc,
-        fmt=image_format,
-        dpi=dpi,
-    )
+    if isinstance(image_format, str):
+        image_format = [image_format]
+    elif not isinstance(image_format, list):
+        raise NotImplementedError
 
-    plot_data_nondimensional(
-        data=merged,
-        extra_info=extra_info,
-        output_dir=plot_dir,
-        no_lines=no_lines,
-        no_transition_annotations=no_transition_annotations,
-        no_auc=no_auc,
-        fmt=image_format,
-        dpi=dpi,
-    )
+    for fmt in image_format:
+        plot_data_time(
+            data=merged,
+            extra_info=extra_info,
+            output_dir=plot_dir,
+            is_synthetic=False,
+            no_lines=no_lines,
+            no_transition_annotations=no_transition_annotations,
+            no_auc=no_auc,
+            fmt=fmt,
+            dpi=dpi,
+        )
+
+        plot_data_nondimensional(
+            data=merged,
+            extra_info=extra_info,
+            output_dir=plot_dir,
+            no_lines=no_lines,
+            no_transition_annotations=no_transition_annotations,
+            no_auc=no_auc,
+            fmt=fmt,
+            dpi=dpi,
+        )
 
     return None
 
@@ -361,7 +378,6 @@ def use_inferred_meta(
                 sheet_name=sheet_name,
                 layout=layout,
                 recalculate_o2_pulse=recalculate_o2_pulse,
-                plot=plot,
             )
         except IndexError as e:
             if str(e) != "Cannot infer meta without nonzero work":
@@ -445,6 +461,7 @@ def main(
 if __name__ == "__main__":
     if USE_COMMAND_LINE_INTERFACE:
         configs = process_args()
+        print(configs)
     else:
         artificial = [
             str(INPUT_PATH),

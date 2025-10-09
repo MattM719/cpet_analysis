@@ -27,6 +27,9 @@ COLUMN_CONVERSION_CINCINNATI = {
 }
 
 
+pd.set_option('future.no_silent_downcasting', True)
+
+
 def _cincinnati_meta_reader(row: dict[str, Any]) -> META_TYPE:
     """Reads the cincinnati data format and converts it to the UW format"""
     fmt = {
@@ -224,6 +227,8 @@ def read_study_data(
         raise FileNotFoundError(f"Did not recognize extension '{path.suffix}'")
 
     if layout == "cincinnati":
+        if 'Work_Watts' not in full_df.columns:
+            full_df['Work_Watts'] = ['Watts', *[np.nan for _ in range(full_df.shape[0] - 1)]]
         df: pd.DataFrame = full_df.loc[
             :, list(COLUMN_CONVERSION_CINCINNATI.keys())
         ].rename(columns=COLUMN_CONVERSION_CINCINNATI, copy=True)
@@ -234,10 +239,12 @@ def read_study_data(
     else:
         raise ValueError(f"Unexpected layout '{layout}'")
 
+
     if layout == "cincinnati":
         units = df.iloc[0, :].to_dict()
         df.drop(0, axis=0, inplace=True)
         df.reset_index(inplace=True, drop=True)
+        df = df.replace(r'^\s+$', np.nan, regex=True, inplace=False).astype(np.float64)
     else:
         units = None
 
@@ -366,7 +373,6 @@ def read_without_meta(
     path: str | Path,
     layout: Literal["cincinnati", "uw"],
     recalculate_o2_pulse: bool,
-    plot: bool,
     sheet_name: Optional[str] = None,
 ) -> tuple[META_TYPE, pd.DataFrame, dict[str, str]]:
     """Reads all CSVs in the supplied directory and uses the Work to determine start/end

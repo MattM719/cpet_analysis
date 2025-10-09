@@ -22,3 +22,4 @@ This is a simplified version of the code used to analyze cardiopulmonary exercis
 
 
 Please cite our work if you use our code. Questions may be directed to the corresponding author.
+DOI: 10.1016/j.ijcchd.2024.100539
